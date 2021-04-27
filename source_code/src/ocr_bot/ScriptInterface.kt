@@ -117,7 +117,7 @@ interface ScriptInterface {
         companion object {
             @JvmStatic
             fun from(creatureName: String): Monster? {
-                return values().firstOrNull() {
+                return values().firstOrNull()    {
                     it.monsterName == creatureName
                 }
             }

@@ -14,11 +14,11 @@ class AutoEat: ScriptInterface {
             return
         }
 
-        if( !client.enemies.isNotEmpty() ) {
+        if( client.enemies.isNotEmpty() ) {
             return
         }
 
-        client.useItem(ScriptInterface.Item.BROWN_MUSHROOM)
+f        client.useItem(ScriptInterface.Item.BROWN_MUSHROOM)
     }
 
     override fun type() = listOf(ScriptType.OTHER)

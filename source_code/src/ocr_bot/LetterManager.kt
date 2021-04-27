@@ -44,7 +44,7 @@ class LetterManager {
         Pair("M", "M"),
         Pair("N", "N"),
 //        Pair("O", "O"),
-        Pair("Q", "Q"),
+//        Pair("Q", "Q"),
         Pair("P", "P"),
         Pair("R", "R"),
         Pair("S", "S"),

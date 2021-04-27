@@ -18,7 +18,7 @@ import kotlin.math.max
 
 typealias ImagePerfectMask = Map<Point, Color>
 
-const val IS_DEBUG = true
+const val IS_DEBUG = false
 const val DEBUG_OUTPUT = false
 //const val DEBUG_SCREEN = "one-rat"
 const val DEBUG_SCREEN = "eremo_island"
@@ -82,16 +82,16 @@ private const val MAX_TITLE_LENGTH = 1024
 fun main() {
     val scripts: List<ScriptInterface> = listOf(
         AutoHealing(),
-        AutoAttack(
-            ignoreMonsters = listOf(
-                ScriptInterface.Monster.DOG
-            )
-        ),
-        AutoTargetMonsterScript(),
-        AutoSioScript(supportCreatureWithName = "Kalan The Sla"),
+//        AutoAttack(
+//            ignoreMonsters = listOf(
+//                ScriptInterface.Monster.DOG
+//            )
+//        ),
+//        AutoTargetMonsterScript()
+//        AutoSioScript(supportCreatureWithName = "Kalan"),
         AutoManaPotion(potion = ScriptInterface.Item.GREAT_MANA_POTION),
-        AutoHasteScript(),
-        AutoCurseScript(),
+//        AutoHasteScript(),
+//        AutoCurseScript(),
 //        ManaBurningScript(spell = ScriptInterface.Spell.UTANA_VID),
         AutoEat()
     )
@@ -108,7 +108,17 @@ fun main() {
     val keyboardRobot = Robot()
     var lastVisible = false
 
+    var lastTime = System.currentTimeMillis();
+
     while( true ) {
+
+        val currentTime = System.currentTimeMillis()
+
+        if( currentTime < lastTime + 1000) {
+            continue
+        }
+
+        lastTime = System.currentTimeMillis()
 
         if( !IS_DEBUG ) {
             val buffer = CharArray(MAX_TITLE_LENGTH * 2)
@@ -162,8 +172,8 @@ fun main() {
                 keyboard = keyboardRobot,
                 health = reader.readHealth(),
                 mana = reader.readMana(),
-                friends = reader.readFriends(),
-                enemies = reader.readEnemies(),
+                friends = emptyList(), //reader.readFriends(),
+                enemies = emptyList(), //reader.readEnemies(),
                 isHungry = reader.readIsHungry(),
                 isFight = reader.readIsFight(),
                 isPoison = reader.readIsPoison(),
@@ -448,21 +458,21 @@ class Reader {
     fun readIsHealingCooldown(): Boolean {
         // Jeśli jest cooldown na zaklecia leczace to zapalony jest pixel (ostatni który znika z paska)
 
-        val color = Color(recorder.capture().getRGB(206, 958), true)
+        val color = Color(recorder.capture().getRGB(206, 888), true)
 
         return color == Color.WHITE
     }
 
     fun readIsAttackCooldown(): Boolean {
         // Jeśli jest cooldown na zaatakowanie to zapalony jest pixel (ostatni który znika z paska)
-        val color = Color(recorder.capture().getRGB(180, 958), true)
+        val color = Color(recorder.capture().getRGB(180, 888), true)
 
         return color == Color.WHITE
     }
 
     fun readIsSupportCooldown(): Boolean {
         // Jeśli jest cooldown na zaatakowanie to zapalony jest pixel (ostatni który znika z paska)
-        val color = Color(recorder.capture().getRGB(230, 958), true)
+        val color = Color(recorder.capture().getRGB(230, 888), true)
 
         return color == Color.WHITE
     }
@@ -517,7 +527,7 @@ class Reader {
 
     fun readMana(): Mana {
         val data = parseScreen(
-            sector = Rectangle(1159, 25, 115, 10),
+            sector = Rectangle(1059, 25, 215, 10),
             numbers = letterManager.letterOfNumbers()
         )
 

@@ -48,17 +48,6 @@ class BattleListReader (
             creatures.add(creature)
         }
 
-        val gameSector = Rectangle(392, 78, 960, 704)
-        val imageOfGame = recorder.capture(gameSector)
-
-
-        // 106 x 109
-        // 15 x 11 => 165 tyle pixeli ma ekran
-
-        MinimapReader().read(recorder)
-         // 109
-        val colorData = imageOfGame.getRGB(0, 0, imageOfGame.width, imageOfGame.height, null, 0, imageOfGame.width)
-
         return creatures
     }
 
@@ -106,9 +95,10 @@ class BattleListReader (
         val imageOfCreatureName = clipCreatureName(rowNumber)
         val maskOfCreatureName = makeMaskOfCreatureName(imageOfCreatureName)
 
+//        ImageIO.write(imageOfCreatureName, "png", File("C:\\Users\\YourFrog\\Documents\\Tibia\\debug.png"))
         val creatureFromKnownledgeCreature = getCreatureNameFromKnownledge(maskOfCreatureName)
 
-        return when {
+         return when {
             creatureFromKnownledgeCreature == null -> {
                 val creatureName = getCreatureNameFromMask(imageOfCreatureName, maskOfCreatureName)
 

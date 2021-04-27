@@ -13,14 +13,14 @@ class MaskOfSpecificColorReader {
     /**
      *  Tworzy maskę z obrazka na podstawie określonego koloru
      */
-    fun mask(image: BufferedImage, color: Color): MaskOfCreatureName {
+    fun mask(image: BufferedImage, inputColor: Color): MaskOfCreatureName {
         val result = mutableListOf<Point>()
 
         for(x in 0 until image.width) {
             for(y in 0 until image.height) {
                 val color = Color(image.getRGB(x, y), true)
 
-                if( color.rgb == color.rgb ) {
+                if( color.rgb == inputColor.rgb ) {
                     result.add(Point(x, y))
                 }
             }
