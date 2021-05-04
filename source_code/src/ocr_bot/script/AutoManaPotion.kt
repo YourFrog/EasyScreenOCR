@@ -12,7 +12,9 @@ import ocr_bot.useItem
 class AutoManaPotion(
     private val potion: Item
 ): ScriptInterface {
-    override fun execute(client: Client) {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         val needPotion = when {
             client.enemies.isEmpty() && client.mana.percent() < 90 -> true
             client.enemies.size == 1 && client.isAttackCooldown && client.mana.percent() < 50 -> true
@@ -22,8 +24,10 @@ class AutoManaPotion(
         }
 
         if( needPotion ) {
-            client.useItem(potion)
+            return client.useItem(potion)
         }
+
+        return false
     }
 
     override fun type() = listOf(ScriptType.OTHER)

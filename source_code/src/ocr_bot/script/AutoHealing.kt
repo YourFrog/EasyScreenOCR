@@ -7,28 +7,36 @@ import ocr_bot.ScriptInterface.Spell
  *  Skrypt próbuje utrzymać przy życiu postać używając odpowiedniego zaklęcia, a jeżeli się to nie powiedzie to odpalając utame
  */
 class AutoHealing: ScriptInterface {
-    override fun execute(client: Client) {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( client.isHealingCooldown ) {
             noManaOrHealingIsDisable(client)
-            return
+            return false
         }
 
+        val healthPercent = client.health.percent()
+
         val spellIsCast = when {
-            client.health.percent() in 90 .. 99 -> client.castSpell(Spell.EXURA)
-            client.health.percent() in 75 .. 90 -> client.castFirstSpell(Spell.EXURA_GRAN, Spell.EXURA)
-            client.health.percent() in -1 .. 75 ->  client.castFirstSpell(Spell.EXURA_VITA, Spell.EXURA_GRAN, Spell.EXURA)
+            healthPercent in 90 .. 99 -> client.castSpell(Spell.EXURA)
+            healthPercent in 75 .. 90 -> client.castFirstSpell(Spell.EXURA_GRAN, Spell.EXURA)
+            healthPercent in -1 .. 75 ->  client.castFirstSpell(Spell.EXURA_VITA, Spell.EXURA_GRAN, Spell.EXURA)
             else -> false
         }
 
         if( !spellIsCast ) {
-            noManaOrHealingIsDisable(client)
+            return noManaOrHealingIsDisable(client)
         }
+
+        return true
     }
 
-    private fun noManaOrHealingIsDisable(client: Client) {
+    private fun noManaOrHealingIsDisable(client: Client): Boolean {
         if( client.health.percent() < 30 ) {
-            client.castSpell(Spell.UTAMO_VITA)
+            return client.castSpell(Spell.UTAMO_VITA)
         }
+
+        return false
     }
 
     override fun type() = listOf(ScriptInterface.ScriptType.HEALING)

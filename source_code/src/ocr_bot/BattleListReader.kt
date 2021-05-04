@@ -26,6 +26,15 @@ class BattleListReader (
      */
     private val textColor = Color(192, 192, 192, 255)
 
+    private val highlightTextColor = Color(247,247,247, 255)
+
+    /**
+     *  Kolor zaznaczenia potwora
+     */
+    private val targetColor = Color.RED
+
+    private val highlightTargetColor = Color(255, 128, 128, 255)
+
     /**
      *  Odnalezione wcześniej istoty
      */
@@ -70,7 +79,9 @@ class BattleListReader (
      *  Sprawdzenie czy istota na podanej lokalizacji jest zaznaczona
      */
     private fun isTargetCreature(rowNumber: Int): Boolean {
-        return Color(recorder.capture().getRGB(baseLeft - 3, baseTop + rowNumber * HEIGHT_OF_SINGLE_ROW), true) == Color.RED
+        val color = Color(recorder.capture().getRGB(baseLeft - 2, baseTop + rowNumber * HEIGHT_OF_SINGLE_ROW), true)
+
+        return color == targetColor || color == highlightTargetColor
     }
 
     /**
@@ -95,7 +106,11 @@ class BattleListReader (
         val imageOfCreatureName = clipCreatureName(rowNumber)
         val maskOfCreatureName = makeMaskOfCreatureName(imageOfCreatureName)
 
-//        ImageIO.write(imageOfCreatureName, "png", File("C:\\Users\\YourFrog\\Documents\\Tibia\\debug.png"))
+        if( maskOfCreatureName.isEmpty() ) {
+            ImageIO.write(imageOfCreatureName, "png", File("C:\\Users\\YourFrog\\Documents\\Tibia\\debug.png"))
+
+            val i = 0
+        }
         val creatureFromKnownledgeCreature = getCreatureNameFromKnownledge(maskOfCreatureName)
 
          return when {
@@ -159,9 +174,9 @@ class BattleListReader (
             it.isNotEmpty() // Tylko odnalezione litery
         }
         .flatten()
-            .sortedBy {
-                it.leftCorner.x // Sortujemy litery w kolejności odczytu od lewej
-            }
+        .sortedBy {
+            it.leftCorner.x // Sortujemy litery w kolejności odczytu od lewej
+        }
         .let {
             removeWrongLetterInCreatureName(it)
         }
@@ -194,7 +209,7 @@ class BattleListReader (
             }
 
             if( current == null ) {
-                // Nie odnaleziono litery na tych współrzędnych
+                 // Nie odnaleziono litery na tych współrzędnych
                 result.add(candidate)
             } else {
                 // Odnalazłem litere na tych pozycjach
@@ -242,7 +257,15 @@ class BattleListReader (
      *  Tworzy listę punktów gdzie znajdują się kolory związane z literami
      */
     private fun makeMaskOfCreatureName(image: BufferedImage): MaskOfCreatureName {
-        return MaskOfSpecificColorReader().mask(image, textColor)
+        val maskReader = MaskOfSpecificColorReader()
+
+        val normalText = maskReader.mask(image, textColor)
+
+        if( normalText.isEmpty() ) {
+            return maskReader.mask(image, highlightTextColor)
+        }
+
+        return normalText
     }
 
     /**
@@ -252,7 +275,7 @@ class BattleListReader (
         val offsetTop = rowNumber * HEIGHT_OF_SINGLE_ROW
         val calculateTop = offsetTop + baseTop
 
-        val sector = Rectangle(baseLeft, calculateTop + HEIGHT_OF_CREATURE_NAME_SPACE , WIDTH_OF_SINGLE_ROW, HEIGHT_OF_CREATURE_HP_BAR_SPACE)
+        val sector = Rectangle(baseLeft + 1, calculateTop + HEIGHT_OF_CREATURE_NAME_SPACE , WIDTH_OF_SINGLE_ROW - 1, HEIGHT_OF_CREATURE_HP_BAR_SPACE)
 
         return recorder.capture(sector)
     }
@@ -278,19 +301,30 @@ class BattleListReader (
             beforeLetter == 'T' && currentLetter == 'h' -> 1
             beforeLetter == 'L' && currentLetter == 'o' -> 1
             beforeLetter == 'L' && currentLetter == 'i' -> 1
-            beforeLetter == 'R' && currentLetter == 'a' -> 1
+//            beforeLetter == 'R' && currentLetter == 'a' -> 1
+//            beforeLetter == 'R' && currentLetter == 'o' -> 1
+            beforeLetter == 'R' -> 1
             beforeLetter == 'S' && currentLetter == 't' -> 1
             beforeLetter == 'a' && currentLetter == 'j' -> 1
             beforeLetter == 'a' && currentLetter == 't' -> 1
+            beforeLetter == 'a' && currentLetter == 'f' -> 1
+            beforeLetter == 'f' && currentLetter == 'i' -> 1
             beforeLetter == 'n' && currentLetter == 'j' -> 1
-            beforeLetter == 'r' && currentLetter == 'd' -> 1
-            beforeLetter == 'r' && currentLetter == 'a' -> 1
-            beforeLetter == 'r' && currentLetter == 's' -> 1
+            beforeLetter == 'l' && currentLetter == 'f' -> 1
+//            beforeLetter == 'r' && currentLetter == 'd' -> 1
+//            beforeLetter == 'r' && currentLetter == 'a' -> 1
+//            beforeLetter == 'r' && currentLetter == 's' -> 1
+//            beforeLetter == 'r' && currentLetter == 'r' -> 1
+//            beforeLetter == 'r' && currentLetter == 'e' -> 1
+//            beforeLetter == 'r' && currentLetter == 'i' -> 1
+//            beforeLetter == 'r' && currentLetter == 'm' -> 1
+            beforeLetter == 'r' -> 1
             beforeLetter == 't' && currentLetter == 'a' -> 1
             beforeLetter == 't' && currentLetter == 'u' -> 1
             beforeLetter == 't' && currentLetter == 'c' -> 1
             beforeLetter == 'o' && currentLetter == 't' -> 1
             beforeLetter == 'u' && currentLetter == 't' -> 1
+            beforeLetter == 's' && currentLetter == 't' -> 1
             beforeLetter == null && currentLetter == 't' -> 1
             else -> 0
         }
@@ -305,6 +339,10 @@ class BattleListReader (
             }.joinToString("")
 
             digits.add(value)
+        }
+
+        if( map.isEmpty() ) {
+            val i = 0
         }
 
         var first = 0
@@ -355,7 +393,7 @@ class BattleListReader (
 
     companion object {
         const val HEIGHT_OF_SINGLE_ROW = 22
-        const val WIDTH_OF_SINGLE_ROW = 132
+        const val WIDTH_OF_SINGLE_ROW = 133
         const val HEIGHT_OF_CREATURE_NAME_SPACE = 12
         const val HEIGHT_OF_CREATURE_HP_BAR_SPACE = 5
     }

@@ -8,17 +8,21 @@ import ocr_bot.useItem
 /**
  *  Automatyczne jedzenie
  */
-class AutoEat: ScriptInterface {
-    override fun execute(client: Client) {
+class AutoEat(
+    val item: ScriptInterface.Item
+): ScriptInterface {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( !client.isHungry ) {
-            return
+            return false
         }
 
         if( client.enemies.isNotEmpty() ) {
-            return
+            return false
         }
 
-f        client.useItem(ScriptInterface.Item.BROWN_MUSHROOM)
+        return client.useItem(item)
     }
 
     override fun type() = listOf(ScriptType.OTHER)

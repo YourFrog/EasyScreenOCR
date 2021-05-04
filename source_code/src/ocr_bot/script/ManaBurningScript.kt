@@ -13,20 +13,22 @@ import java.awt.event.KeyEvent
 class ManaBurningScript(
     private val spell: Spell
 ): ScriptInterface {
-    override fun execute(client: Client) {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( client.enemies.isNotEmpty() ) {
-            return
+            return false
         }
 
-        if( client.mana.percent() < 99 ) {
-            return
+        if( client.mana.percent() < 89 ) {
+            return false
         }
 
         if( client.isHungry ) {
-            return
+            return false
         }
 
-        client.castSpell(spell)
+        return client.castSpell(spell)
     }
 
     override fun type() = listOf(ScriptType.OTHER)

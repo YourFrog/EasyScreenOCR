@@ -10,17 +10,21 @@ import ocr_bot.hasEnemies
 /**
  *  Utrzymywanie przyśpieszenia na postaci
  */
-class AutoHasteScript: ScriptInterface {
-    override fun execute(client: Client) {
+class AutoHasteScript(
+    private val spell: Spell
+): ScriptInterface {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( client.isHaste ) {
-            return
+            return false
         }
 
         if( client.hasEnemies() ) {
-            return
+            return false
         }
 
-        client.castSpell(Spell.HASTE)
+        return client.castSpell(spell)
     }
 
     override fun type() = listOf(ScriptType.SUPPORT)

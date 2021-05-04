@@ -14,9 +14,11 @@ class AutoSioScript(
      */
     private val supportCreatureWithName: String
 ): ScriptInterface {
-    override fun execute(client: Client) {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( client.isHealingCooldown ) {
-            return
+            return false
         }
 
         val needSio = client.friends.firstOrNull {
@@ -32,8 +34,10 @@ class AutoSioScript(
         } ?: false
 
         if( needSio ) {
-            client.castSpell(Spell.SIO)
+            return client.castSpell(Spell.SIO)
         }
+
+        return false
     }
 
     override fun type() = listOf(ScriptInterface.ScriptType.HEALING)

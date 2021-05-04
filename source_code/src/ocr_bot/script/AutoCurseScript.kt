@@ -8,16 +8,18 @@ import ocr_bot.castSpell
  *  Automatyczne pozbywanie się trucizny
  */
 class AutoCurseScript: ScriptInterface {
-    override fun execute(client: Client) {
+    override fun name() = this::class.java.simpleName
+
+    override fun execute(client: Client): Boolean {
         if( !client.isPoison ) {
-            return
+            return false
         }
 
         if( client.enemies.isNotEmpty() ) {
-            return
+            return false
         }
 
-        client.castSpell(ScriptInterface.Spell.EXANA_POX)
+        return client.castSpell(ScriptInterface.Spell.EXANA_POX)
     }
 
     override fun type() = listOf(ScriptInterface.ScriptType.HEALING)

@@ -1,18 +1,22 @@
 package ocr_bot
 
-import com.sun.jna.Native
-import com.sun.jna.Pointer
-import com.sun.jna.platform.win32.WinDef.HWND
-import com.sun.jna.ptr.PointerByReference
-import ocr_bot.reader.MaskOfSpecificColorReader
+import com.sun.awt.AWTUtilities
+import ocr_bot.configuration.ConfigurationInterface
+import ocr_bot.configuration.VenoreOTS
 import ocr_bot.screen.FileDebuggerScreen
 import ocr_bot.screen.RealtimeScreen
 import ocr_bot.screen.ScreenInterface
-import ocr_bot.script.*
+import ocr_bot.ui.Square
+import ocr_bot.ui.controls.ScriptCheckbox
+import ocr_bot.ui.spells.SpellHighlight
+import ocr_bot.ui.spells.StrongFrigoHur
+import ocr_bot.ui.spells.TerraWave
+import ocr_bot.win_api.Window
 import java.awt.*
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import javax.swing.*
 import kotlin.math.floor
 import kotlin.math.max
 
@@ -49,167 +53,271 @@ class ImageWithPerfectMask(
     }
 }
 
-internal object Psapi {
-    external fun GetModuleBaseNameW(hProcess: Pointer?, hmodule: Pointer?, lpBaseName: CharArray?, size: Int): Int
+class TransparentWindow: JFrame("TibiaOverlay") {
+    private val spells: List<SpellHighlight> = listOf()
+
+    private val terraWave = object: JToggleButton() {
+        fun spell() = TerraWave()
+
+        init {
+            text = "Terra wave - Disable"
+            isSelected = false
+
+            preferredSize = Dimension(200, 200)
+            size = Dimension(200, 50)
+            setLocation(180, 500)
+
+            addActionListener {
+                (it.source as? JToggleButton)?.let { button ->
+                    if( button.isSelected ) {
+                        text = "Terra wave - Visible"
+                    } else {
+                        text = "Terra wave - Disable"
+                    }
+                }
+
+                parent.repaint()
+            }
+        }
+    }
+
+    private val strongFrigoHurHighlight = object : JToggleButton() {
+        fun spell() = StrongFrigoHur()
+
+        init {
+            text = "Frigo hur - Disable"
+            isSelected = false
+
+            preferredSize = Dimension(200, 200)
+            size = Dimension(200, 50)
+            setLocation(180, 430)
+
+            addActionListener {
+                (it.source as? JToggleButton)?.let { button ->
+                    if( button.isSelected ) {
+                        text = "Frigo hur - Visible"
+                    } else {
+                        text = "Frigo hur - Disable"
+                    }
+                }
+
+                parent.repaint()
+            }
+        }
+    }
+
+    private val botRunning = object: JToggleButton() {
+
+        init {
+            text = "Bot on"
+            isSelected = true
+
+            preferredSize = Dimension(200, 200)
+            size = Dimension(200, 50)
+            setLocation(180, 360)
+
+            addActionListener {
+                (it.source as? JToggleButton)?.let { button ->
+                    if( button.isSelected ) {
+                        text = "Bot - on"
+                    } else {
+                        text = "Bot - off"
+                    }
+                }
+
+                parent.repaint()
+            }
+        }
+    }
+
+    fun isBotRunning(): Boolean {
+        return botRunning.isSelected
+    }
 
     init {
-        Native.register("psapi")
+        isAlwaysOnTop = true
+        isUndecorated = true
+        background = Color(0, 0, 0, 0)
+
+        add(JLabel("Bot is running").apply {
+            foreground = Color.ORANGE
+            background = Color.RED
+
+            preferredSize = Dimension(200, 200)
+            size = Dimension(200, 200)
+
+            setLocation(180, 665)
+        })
+
+        add(terraWave)
+        add(strongFrigoHurHighlight)
+        add(botRunning)
+
+        preferredSize = Toolkit.getDefaultToolkit().screenSize.let { screen ->
+            Dimension(screen.width, screen.height)
+        }
+
+        layout = null
+        pack()
+        isVisible = false
+
+
+        focusableWindowState = false
+        AWTUtilities.setWindowOpaque(this, false)
+        rootPane.putClientProperty("apple.awt.draggableWindowBackground", false)
     }
-}
 
-internal object Kernel32 {
-    var PROCESS_QUERY_INFORMATION = 0x0400
-    var PROCESS_VM_READ = 0x0010
-    external fun GetLastError(): Int
-    external fun OpenProcess(dwDesiredAccess: Int, bInheritHandle: Boolean, pointer: Pointer?): Pointer?
+    override fun paint(graphics: Graphics?) {
 
-    init {
-        Native.register("kernel32")
-    }
-}
+        (graphics as? Graphics2D)?.background = Color(0, 0, 0, 0)
+        graphics?.clearRect(0, 0, width, height)
 
-internal object User32DLL {
-    external fun GetWindowThreadProcessId(hWnd: HWND?, pref: PointerByReference?): Int
-    external fun GetForegroundWindow(): HWND?
-    external fun GetWindowTextW(hWnd: HWND?, lpString: CharArray?, nMaxCount: Int): Int
+        val items = mutableListOf<SpellHighlight>().apply {
+            addAll(spells)
+        }
 
-    init {
-        Native.register("user32")
-    }
-}
+        if( terraWave.isSelected ) {
+            items.add(terraWave.spell())
+        }
 
-private const val MAX_TITLE_LENGTH = 1024
-fun main() {
-    val scripts: List<ScriptInterface> = listOf(
-        AutoHealing(),
-//        AutoAttack(
-//            ignoreMonsters = listOf(
-//                ScriptInterface.Monster.DOG
+        if( strongFrigoHurHighlight.isSelected ) {
+            items.add(strongFrigoHurHighlight.spell())
+        }
+
+        items.forEach {
+            it.squaresInRightSide()
+                .union(it.squaresInUpSide())
+                .union(it.squaresInBottomSide())
+                .union(it.squaresInLeftSide())
+                .forEach { square ->
+                    graphics?.color = square.getColor()
+
+                    val position = square.getPosition()
+
+                    for(i in 0 .. Square.GAME_SQUARE_WIDTH step 2) {
+                        // Z lewej w dół
+                        graphics?.drawLine(
+                            position.x,
+                            position.y + i,
+                            position.x + Square.GAME_SQUARE_WIDTH - i,
+                            position.y + Square.GAME_SQUARE_HEIGHT
+                        )
+                    }
+
+                    for(i in 2 .. Square.GAME_SQUARE_WIDTH step 2) {
+                        // Z lewej w prawo
+                        graphics?.drawLine(
+                            position.x + i,
+                            position.y,
+                            position.x + Square.GAME_SQUARE_WIDTH,
+                            position.y + Square.GAME_SQUARE_HEIGHT - i
+                        )
+                    }
+                }
+
+//            setLocation(
+//                Square.GAME_LEFT_TOP_X,
+//                Square.GAME_LEFT_TOP_Y
 //            )
-//        ),
-//        AutoTargetMonsterScript()
-//        AutoSioScript(supportCreatureWithName = "Kalan"),
-        AutoManaPotion(potion = ScriptInterface.Item.GREAT_MANA_POTION),
-//        AutoHasteScript(),
-//        AutoCurseScript(),
-//        ManaBurningScript(spell = ScriptInterface.Spell.UTANA_VID),
-        AutoEat()
-    )
+//
+//            preferredSize = Dimension(Square.GAME_SCREEN_WIDTH, Square.GAME_SCREEN_HEIGHT)
+//            size = Dimension(Square.GAME_SCREEN_WIDTH, Square.GAME_SCREEN_HEIGHT)
+//
+//            layout = null
+        }
 
-    val screen = Toolkit.getDefaultToolkit().screenSize
-    val area = Rectangle(screen)
+        super.paintComponents(graphics)
+    }
+}
 
+fun main() {
+    Thread.sleep(1000)
+
+    val configuration: ConfigurationInterface = VenoreOTS()
+
+    val availableScripts = configuration
+        .scripts
+        .map { ScriptCheckbox(it) }
+
+    val tibiaOverlay = TransparentWindow().apply {
+        isVisible = Window.isTibiaWindowOnForeground()
+
+        availableScripts.forEachIndexed { index, checkbox ->
+            add(checkbox.apply {
+                setLocation(Square.GAME_SCREEN_WIDTH + Square.GAME_LEFT_TOP_X + 20, Square.GAME_LEFT_TOP_Y + 25 * index)
+            })
+        }
+
+        pack()
+    }
 
     val reader = Reader()
-
-    var lastMana = Mana(0, 0)
-    var lastHealth = Health(0, 0)
-
     val keyboardRobot = Robot()
-    var lastVisible = false
+    var lastTime = System.currentTimeMillis()
 
-    var lastTime = System.currentTimeMillis();
-
+    tibiaOverlay.repaint()
     while( true ) {
+//        tibiaOverlay.isVisible = false
+        tibiaOverlay.isVisible = Window.isTibiaWindowOnForeground()
 
         val currentTime = System.currentTimeMillis()
 
-        if( currentTime < lastTime + 1000) {
+        if( currentTime < lastTime + configuration.delayBeetwenCaptureScreenInMilliseconds ) {
             continue
         }
 
         lastTime = System.currentTimeMillis()
 
-        if( !IS_DEBUG ) {
-            val buffer = CharArray(MAX_TITLE_LENGTH * 2)
-            User32DLL.GetWindowTextW(User32DLL.GetForegroundWindow(), buffer, MAX_TITLE_LENGTH)
-
-            val windowTitle = String(buffer)
-
-            if (!windowTitle.startsWith("Tibia -")) {
-                lastVisible = false
-                continue
-            }
-
-            if (!lastVisible) {
-                lastVisible = true
-                Thread.sleep(2000)
-            }
+        if( !IS_DEBUG && Window.isTibiaWindowOnBackground() ) {
+            // Okno tibi musi byc na wierzchu, dajmy procesorowi odpocząć
+            tibiaOverlay.isVisible = false
+            System.out.println("Tibia is not foreground, i going sleep")
+            Thread.sleep(2000)
+            continue
         }
 
         reader.renewCapture()
 
+        if( !IS_DEBUG && Window.isTibiaWindowOnBackground() ) {
+            tibiaOverlay.isVisible = false
+            System.out.println("Po wykonaniu screenshowa okno to nie tibia")
+            Thread.sleep(2000)
+            continue
+        }
 
-//
-//        reader.readMana()?.let { mana ->
-//            if( lastMana != mana ) {
-//                val content = mana.current.toString() + " " + mana.max.toString()
-//
-//                val writer = FileWriter("I:/mana.txt")
-//                writer.write(content)
-//                writer.flush()
-//
-//                lastMana = mana
-//            }
-//        }
-//
-//        reader.readHealth()?.let { health ->
-//            if( lastHealth != health ) {
-//                val content = health.current.toString() + " " + health.max.toString()
-//
-//                val writer = FileWriter("I:/health.txt")
-//                writer.write(content)
-//                writer.flush()
-//
-//                lastHealth = health
-//            }
-//        }
+        if( !tibiaOverlay.isBotRunning() ) {
+            System.out.println("Bot wylaczony")
+            Thread.sleep(500)
+            continue
+        }
 
-//        reader.readEnemies()
-
-        val client = benchmark {
+        val client =
             Client(
                 keyboard = keyboardRobot,
                 health = reader.readHealth(),
                 mana = reader.readMana(),
-                friends = emptyList(), //reader.readFriends(),
-                enemies = emptyList(), //reader.readEnemies(),
+                friends = reader.readFriends(),
+                enemies = reader.readEnemies(),
                 isHungry = reader.readIsHungry(),
                 isFight = reader.readIsFight(),
                 isPoison = reader.readIsPoison(),
                 isHaste = reader.readIsHaste(),
                 isBleeding = reader.readIsBleeding(),
                 isUtamo = reader.readIsUtamo(),
+                isBurning = reader.readIsBurning(),
+                // isParalyze:
+                // isBurn
                 isHealingCooldown = reader.readIsHealingCooldown(),
                 isAttackCooldown = reader.readIsAttackCooldown(),
                 isSupportCooldown = reader.readIsSupportCooldown()
             )
-        }
 
-//
-//        client.health?.let { health ->
-//            val content = "" + health.current + " " + health.max
-//            val writer = FileWriter("I:/health.txt")
-//            writer.write(content)
-//            writer.flush()
-//        }
-//
-//        client.mana?.let { mana ->
-//            val content = "" + mana.current + " " + mana.max
-//            val writer = FileWriter("I:/mana.txt")
-//            writer.write(content)
-//            writer.flush()
-//        }
-//
-//        client.friends?.let { friends ->
-//            val content = "" + friends.size
-//            val writer = FileWriter("I:/friends.txt")
-//            writer.write(content)
-//            writer.flush()
-//        }
-        val i = 0
-
-        scripts.forEach { script ->
+        /** Uruchomienie zaznaczonych checkboxów */
+        availableScripts.filter {
+            it.isSelected
+        }.map {
+            it.script
+        }.forEach { script ->
             script.execute(client)
         }
     }
@@ -231,14 +339,14 @@ class Reader {
     }
 
     private val readerOfEnemiesBattleList = BattleListReader(
-        baseLeft = 1594,
+        baseLeft = 1593,
         baseTop = 446,
         recorder = recorder,
         letterManager = LetterManager()
     )
 
     private val readerOfFriendsBattleList = BattleListReader(
-        baseLeft = 1594,
+        baseLeft = 1593,
         baseTop = 85,
         recorder = recorder,
         letterManager = LetterManager()
@@ -250,6 +358,7 @@ class Reader {
     private val bleeding = ImageWithPerfectMask(ImageIO.read(File("C:\\Users\\YourFrog\\Documents\\Tibia\\Status\\bleeding.png")))
     private val poison = ImageWithPerfectMask(ImageIO.read(File("C:\\Users\\YourFrog\\Documents\\Tibia\\Status\\poison.png")))
     private val utamo = ImageWithPerfectMask(ImageIO.read(File("C:\\Users\\YourFrog\\Documents\\Tibia\\Status\\utamo.png")))
+    private val burning = ImageWithPerfectMask(ImageIO.read(File("C:\\Users\\YourFrog\\Documents\\Tibia\\Status\\burning.png")))
 
     private val robot: Robot by lazy { Robot() }
 
@@ -453,6 +562,11 @@ class Reader {
     fun readIsUtamo(): Boolean = findSameImage(
         source = captureOfStatusBar(),
         perfectMask = utamo
+    )
+
+    fun readIsBurning(): Boolean = findSameImage(
+        source = captureOfStatusBar(),
+        perfectMask = burning
     )
 
     fun readIsHealingCooldown(): Boolean {
@@ -842,6 +956,7 @@ data class Client(
     val isPoison: Boolean,
     val isHaste: Boolean,
     val isBleeding: Boolean,
+    val isBurning: Boolean,
     val isUtamo: Boolean,
     val isHealingCooldown: Boolean,
     val isAttackCooldown: Boolean,

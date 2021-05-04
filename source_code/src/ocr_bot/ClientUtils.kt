@@ -1,5 +1,8 @@
 package ocr_bot
 
+import me.coley.simplejna.Keyboard
+import java.awt.event.KeyEvent
+
 /**
  *  Sprawdzeie czy mamy zaznaczonego jakąś istote
  */
@@ -90,9 +93,15 @@ fun Client.isAllowToCast(spell: ScriptInterface.Spell): Boolean {
  *  Użycie przedmiotu z paska akcji
  */
 fun Client.useItem(item: ScriptInterface.Item): Boolean {
-
     pressAndRelease(item.key)
+    return true
+}
 
+/**
+ *  Użycie runy z paska akcji
+ */
+fun Client.useRune(item: ScriptInterface.Rune): Boolean {
+    pressAndRelease(item.key)
     return true
 }
 
@@ -102,6 +111,10 @@ fun Client.useItem(item: ScriptInterface.Item): Boolean {
 fun Client.pressAndRelease(key: Int) {
     if( IS_DEBUG ) return
 
-    keyboard.keyPress(key)
-    keyboard.keyRelease(key)
+    if( Keyboard.isKeyDown(KeyEvent.VK_CONTROL) ) return
+
+    Keyboard.sendKeyDown(key)
+    Keyboard.sendKeyUp(key)
+//    keyboard.keyPress(key)
+//    keyboard.keyRelease(key)
 }
